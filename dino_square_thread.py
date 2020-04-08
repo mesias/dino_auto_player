@@ -13,7 +13,7 @@ abspath = os.path.abspath(__file__)
 dname = os.path.dirname(abspath)
 os.chdir(dname)
 
-chrome_params = ['/usr/bin/google-chrome', '--new-window', '--profile-directory=Default']
+chrome_params = ['/usr/bin/google-chrome', '--new-window', '--profile-directory=Default', '--guest']
 
 def get_delta():
     total_elapsed = time.time() - ttt
@@ -54,23 +54,24 @@ print('Border', locateBorder)
 zero_left = locateBorder.left - 18
 zero_top = locateBorder.top - 5
 
-region_pos = ((zero_left + 340), (zero_top + 390), 1, 100)
+region_pos = ((zero_left + 380), (zero_top + 390), 1, 150)
 grab_pos = (region_pos[0], region_pos[1], region_pos[0]+region_pos[2], region_pos[1]+region_pos[3])
-grab_dino = ((zero_left + 90), (zero_top + 480), (zero_left + 100), (zero_top + 480))
+grab_dino = ((zero_left + 90), (zero_top + 480), (zero_left + 110), (zero_top + 480))
 
 grab_all = ((zero_left + 90), (zero_top + 390), region_pos[0]+region_pos[2], region_pos[1]+region_pos[3])
 grey_color = (83, 83, 83)
 ggrey_color = (172, 172, 172)
 grey_tuple = (grey_color, ggrey_color)
-screen_shot_min_highscore = 600
+screen_shot_min_highscore = 700
 sct = mss.mss()
 running = True
 tdata = None
 jump = False
 jump_count_grey = 0
+jump_count_grey_total = 0
 jump_count_white = 0
 
-pyautogui.moveTo(*region_pos[:2])
+pyautogui.moveTo(*grab_all[-2:])
 
 def check_pix(pos):
     try:
@@ -81,14 +82,14 @@ def check_pix(pos):
         print(e)
         return False
 
-def get_data(pixels):
+def get_data(pixels, pixel_background):
     counter = 0
     lst = []
     last = -1
     frst = -1
     size = 0
     for i, p in enumerate(pixels):
-        if p in grey_tuple:
+        if p != pixel_background:
             if last > 0 and (last + 1) == i:
                 if frst < 0:
                     frst = i
@@ -113,28 +114,34 @@ while running:
     count += 1
     up = dw = None
     mytime = int((time.time() - ttt) * 10)
+
     # up = check_pix(pos_down)
     # da = pyautogui.screenshot( region=region_pos)    
     da = sct.grab(grab_all)
+    pixel_background = da.pixel(0,region_pos[3]-1)
     if not jump:
-        pixels, lst = get_data([da.pixel(da.width-1,i) for i in range(100)])
+        pixels, lst = get_data([da.pixel(da.width-1,i) for i in range(100)], pixel_background)
     else:
         pixels, lst = 0, []
         #pixels_dino = list(filter(lambda x: x != (255, 255, 255), conv_to_rgb(da)))
         pixels_dino = da.pixel(0,90)
 
-        if pixels_dino in grey_tuple:
+        if pixels_dino != pixel_background:
             jump_count_grey += 1
+            jump_count_grey_total += 1
             #print('Dino jump', jump_count_grey, jump_count_white)
         else:
             jump_count_grey = 0
         jump_count_white += 1
         if jump_count_grey >= 8:
-            print('Aterrisou', jump_count_grey, jump_count_white)
+            print('Aterrisou G[{}:{}] W[{}]'.format(jump_count_grey, 
+                jump_count_grey_total-jump_count_grey, jump_count_white))
             jump = False
-            jump_count_grey = jump_count_white = 0
-    
-    if pixels > 20:
+            jump_count_grey_total = jump_count_grey = jump_count_white = 0
+    # if pixels > 2:
+    #     print('Wall:', pixels, ':', lst)
+
+    if pixels > 6:
         print(retry, 'jump', pixels, lst, 'time:', mytime)
         pyautogui.press('up')
         jump = True
